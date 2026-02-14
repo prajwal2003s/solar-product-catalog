@@ -33,9 +33,10 @@ export function Navbar() {
               className="rounded-lg group-hover:scale-105 transition-transform"
             />
 
-            <span className="hidden sm:inline text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
-              H.V. Electricals
+            <span className="inline text-sm sm:text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
+             H.V. Electricals
             </span>
+
 
           </Link>
 
