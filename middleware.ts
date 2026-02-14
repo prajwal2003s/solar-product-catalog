@@ -3,28 +3,41 @@ import { type NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-  // Skip middleware for public pages and admin login
+
   const pathname = request.nextUrl.pathname
+
+  // ✅ Allow public routes (NO auth needed)
   if (
+    pathname === '/' ||
+    pathname.startsWith('/products') ||
     pathname.startsWith('/admin/login') ||
     pathname.startsWith('/_next') ||
+    pathname.startsWith('/images') ||
     pathname === '/favicon.ico'
   ) {
     return NextResponse.next()
   }
 
-  return await updateSession(request)
+  try {
+
+    // ✅ Only protect admin routes
+    if (pathname.startsWith('/admin')) {
+      return await updateSession(request)
+    }
+
+    return NextResponse.next()
+
+  } catch (error) {
+
+    console.error("Middleware error:", error)
+
+    // ✅ Fail-safe fallback
+    return NextResponse.next()
+  }
 }
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - images - .svg, .png, .jpg, .jpeg, .gif, .webp
-     */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/admin/:path*'
   ],
 }
