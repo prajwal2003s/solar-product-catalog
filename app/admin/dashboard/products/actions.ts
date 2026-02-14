@@ -15,6 +15,8 @@ export interface Product {
   updated_at: string
 }
 
+/* ================= FETCH ALL ================= */
+
 export async function fetchAllProducts(): Promise<{
   data: Product[] | null
   error: string | null
@@ -28,17 +30,20 @@ export async function fetchAllProducts(): Promise<{
       .order('created_at', { ascending: false })
 
     if (error) {
-      console.error('[v0] Supabase error:', error)
       return { data: null, error: error.message }
     }
 
     return { data: data || [], error: null }
+
   } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : 'Unknown error'
-    console.error('[v0] Error fetching products:', errorMessage)
-    return { data: null, error: errorMessage }
+    return {
+      data: null,
+      error: err instanceof Error ? err.message : 'Unknown error'
+    }
   }
 }
+
+/* ================= FETCH ONE ================= */
 
 export async function fetchProductById(id: string): Promise<{
   data: Product | null
@@ -58,38 +63,43 @@ export async function fetchProductById(id: string): Promise<{
     }
 
     return { data, error: null }
+
   } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : 'Unknown error'
-    return { data: null, error: errorMessage }
+    return {
+      data: null,
+      error: err instanceof Error ? err.message : 'Unknown error'
+    }
   }
 }
+
+/* ================= CREATE ================= */
 
 export async function createProduct(formData: {
   name: string
   description: string
   category: string
   whatsapp_number: string
-  image_url?: string
+  image_url?: string | null
   status: string
 }): Promise<{
   data: Product | null
   error: string | null
 }> {
+
   try {
+
     const supabase = await createClient()
 
     const { data, error } = await supabase
       .from('products')
-      .insert([
-        {
-          name: formData.name,
-          description: formData.description,
-          category: formData.category,
-          whatsapp_number: formData.whatsapp_number,
-          image_url: formData.image_url || null,
-          status: formData.status,
-        },
-      ])
+      .insert({
+        name: formData.name,
+        description: formData.description,
+        category: formData.category,
+        whatsapp_number: formData.whatsapp_number,
+        image_url: formData.image_url ?? null,
+        status: formData.status,
+      })
       .select()
       .single()
 
@@ -98,12 +108,21 @@ export async function createProduct(formData: {
     }
 
     revalidateTag('products')
+
     return { data, error: null }
+
   } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : 'Unknown error'
-    return { data: null, error: errorMessage }
+
+    return {
+      data: null,
+      error: err instanceof Error ? err.message : 'Unknown error'
+    }
+
   }
+
 }
+
+/* ================= UPDATE ================= */
 
 export async function updateProduct(
   id: string,
@@ -112,27 +131,31 @@ export async function updateProduct(
     description: string
     category: string
     whatsapp_number: string
-    image_url?: string
+    image_url?: string | null
     status: string
   }
 ): Promise<{
   data: Product | null
   error: string | null
 }> {
+
   try {
+
     const supabase = await createClient()
+
+    const updateData = {
+      name: formData.name,
+      description: formData.description,
+      category: formData.category,
+      whatsapp_number: formData.whatsapp_number,
+      image_url: formData.image_url ?? null,
+      status: formData.status,
+      updated_at: new Date().toISOString(),
+    }
 
     const { data, error } = await supabase
       .from('products')
-      .update({
-        name: formData.name,
-        description: formData.description,
-        category: formData.category,
-        whatsapp_number: formData.whatsapp_number,
-        image_url: formData.image_url || null,
-        status: formData.status,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single()
@@ -142,18 +165,29 @@ export async function updateProduct(
     }
 
     revalidateTag('products')
+
     return { data, error: null }
+
   } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : 'Unknown error'
-    return { data: null, error: errorMessage }
+
+    return {
+      data: null,
+      error: err instanceof Error ? err.message : 'Unknown error'
+    }
+
   }
+
 }
+
+/* ================= DELETE ================= */
 
 export async function deleteProduct(id: string): Promise<{
   success: boolean
   error: string | null
 }> {
+
   try {
+
     const supabase = await createClient()
 
     const { error } = await supabase
@@ -166,24 +200,52 @@ export async function deleteProduct(id: string): Promise<{
     }
 
     revalidateTag('products')
+
     return { success: true, error: null }
+
   } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : 'Unknown error'
-    return { success: false, error: errorMessage }
+
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Unknown error'
+    }
+
   }
+
 }
 
-export async function toggleProductStatus(id: string, currentStatus: string): Promise<{
+/* ================= TOGGLE STATUS ================= */
+
+export async function toggleProductStatus(
+  id: string,
+  currentStatus: string
+): Promise<{
   data: Product | null
   error: string | null
 }> {
-  const newStatus = currentStatus === 'active' ? 'inactive' : 'active'
 
-  return updateProduct(id, {
-    name: '',
-    description: '',
-    category: '',
-    whatsapp_number: '',
-    status: newStatus,
-  })
+  const newStatus = currentStatus === 'active'
+    ? 'inactive'
+    : 'active'
+
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('products')
+    .update({
+      status: newStatus,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) {
+    return { data: null, error: error.message }
+  }
+
+  revalidateTag('products')
+
+  return { data, error: null }
+
 }
